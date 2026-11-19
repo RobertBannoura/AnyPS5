@@ -14,6 +14,21 @@ import pad_input
 
 
 class PadInputTests(unittest.TestCase):
+    def test_oversized_commands_do_not_exhaust_sequence(self):
+        for prefix in (b"18446744073709551615 0 1\n",
+                       b"APS5_PAD_TIMELINE 1 18446744073709551615 1\n0 1 0\n"):
+            for suffix in (b" ", b"\r\n", b"\x1a"):
+                with self.subTest(prefix=prefix, suffix=suffix):
+                    content = prefix + b" " * (65536 - len(prefix)) + suffix
+                    self.path.write_bytes(content)
+                    self.assertEqual(self.queue(1000, "down"), [1000, 64, 300])
+
+    def test_commands_at_runtime_size_limit_preserve_sequence(self):
+        for prefix in (b"2000 0 1\n", b"APS5_PAD_TIMELINE 1 2000 1\n0 1 0\n"):
+            with self.subTest(prefix=prefix):
+                self.path.write_bytes(prefix + b" " * (65536 - len(prefix)))
+                self.assertEqual(self.queue(1000, "down"), [2001, 64, 300])
+
     def setUp(self):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)

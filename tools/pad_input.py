@@ -1,4 +1,5 @@
 import argparse
+import io
 import os
 from pathlib import Path
 import re
@@ -58,6 +59,10 @@ def timeline_sequence(command, header):
 def previous_sequence(path):
     try:
         with path.open("rb") as command:
+            content = command.read(64 * 1024 + 1)
+            if len(content) > 64 * 1024:
+                return 0
+            command = io.BytesIO(content)
             line = command.readline(129)
             if os.name == "nt" and line.endswith(b"\r\n"):
                 line = line[:-2] + b"\n"
